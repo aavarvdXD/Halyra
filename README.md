@@ -13,8 +13,9 @@ cd Halyra
 ./gradlew run
 ```
 **Requires Java 17 or higher and Python installed and available on** `PATH`  
-If you're on Windows, execute `gradlew.bat run` instead of `./gradlew run`
+If you're on Windows, execute `gradlew.bat run` instead of `./gradlew run`  
 
+You don't want to build youself? the releases page is made for you
 
 ---
 ## Project Features
