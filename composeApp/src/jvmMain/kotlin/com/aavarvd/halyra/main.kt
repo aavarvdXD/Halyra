@@ -16,42 +16,11 @@ import com.aavarvd.halyra.ui.SplashScreen
 import kotlinx.coroutines.delay
 import java.awt.Frame
 import java.awt.GraphicsConfiguration
-import java.awt.GraphicsEnvironment
-import java.awt.Point
 import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.Window as AwtWindow
 import java.beans.PropertyChangeListener
 import kotlin.time.Duration.Companion.milliseconds
-
-private fun screenBoundsForWindow(window: AwtWindow): Rectangle {
-    val screenDevices = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
-    val fallbackDevice = window.graphicsConfiguration?.device ?: GraphicsEnvironment
-        .getLocalGraphicsEnvironment()
-        .defaultScreenDevice
-    val windowCenter = Point(window.x + window.width / 2, window.y + window.height / 2)
-
-    var bestDevice = fallbackDevice
-    var bestDistance = Long.MAX_VALUE
-
-    for (candidate in screenDevices) {
-        val bounds = candidate.defaultConfiguration.bounds
-        if (bounds.contains(windowCenter)) {
-            bestDevice = candidate
-            bestDistance = 0L
-            break
-        }
-
-        val distance = distanceSquaredToBounds(windowCenter, bounds)
-        if (distance < bestDistance) {
-            bestDistance = distance
-            bestDevice = candidate
-        }
-    }
-
-    return usableBounds(bestDevice.defaultConfiguration)
-}
-
 internal fun usableBounds(configuration: GraphicsConfiguration): Rectangle {
     val insets = Toolkit.getDefaultToolkit().getScreenInsets(configuration)
     val bounds = configuration.bounds
@@ -63,20 +32,6 @@ internal fun usableBounds(configuration: GraphicsConfiguration): Rectangle {
         width,
         height
     )
-}
-
-private fun distanceSquaredToBounds(point: Point, bounds: Rectangle): Long {
-    val dx = when {
-        point.x < bounds.x -> (bounds.x - point.x).toLong()
-        point.x > bounds.x + bounds.width -> (point.x - (bounds.x + bounds.width)).toLong()
-        else -> 0L
-    }
-    val dy = when {
-        point.y < bounds.y -> (bounds.y - point.y).toLong()
-        point.y > bounds.y + bounds.height -> (point.y - (bounds.y + bounds.height)).toLong()
-        else -> 0L
-    }
-    return dx * dx + dy * dy
 }
 
 private fun clampWindowToBounds(window: AwtWindow, bounds: Rectangle) {
@@ -131,7 +86,6 @@ fun main() = application {
             resizable = !useCustomTitlebar || mainWindowState.placement != WindowPlacement.Maximized
         ) {
             if (useCustomTitlebar) {
-                // Handle window state changes via AWT for reliability when undecorated
                 LaunchedEffect(mainWindowState.placement) {
                     if (mainWindowState.placement == WindowPlacement.Maximized) {
                         window.extendedState = Frame.MAXIMIZED_BOTH
@@ -212,7 +166,6 @@ fun main() = application {
             )
 
             if (isAskingToClose && !triggerClose) {
-                // Handled via onCloseCancelled callback
             }
         }
     }

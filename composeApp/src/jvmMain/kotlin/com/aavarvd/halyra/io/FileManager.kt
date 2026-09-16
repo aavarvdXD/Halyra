@@ -41,7 +41,7 @@ class FileManager(private val appState: AppState) {
     }
 
     companion object {
-        const val LARGE_FILE_WARNING_BYTES = 300_000L
+        const val LARGE_FILE_WARNING_BYTES = 100_000L
     }
 
     fun openFile(file: java.io.File, content: String? = null, forceOpen: Boolean = false) {
@@ -57,34 +57,38 @@ class FileManager(private val appState: AppState) {
         }
 
         appState.isLoadingFile = true
+        appState.loadingFileName = file.name
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val fileContent = content ?: file.readText()
+        CoroutineScope(Dispatchers.Main).launch {
+            kotlinx.coroutines.delay(50)
 
-            withContext(Dispatchers.Main) {
-                val newTab = EditorTab(
-                    file = file,
-                    text = TextFieldValue(fileContent),
-                    lastSavedText = fileContent
-                )
-
-                val activeTab = appState.activeTab
-                if (
-                    appState.tabs.size == 1 &&
-                    activeTab != null &&
-                    activeTab.file == null &&
-                    activeTab.text.text.isEmpty() &&
-                    !activeTab.isModified
-                ) {
-                    appState.tabs[0] = newTab
-                } else {
-                    appState.tabs.add(newTab)
-                    appState.activeTabIndex = appState.tabs.size - 1
-                }
-                appState.output = ""
-                appState.terminalInput = ""
-                appState.isLoadingFile = false
+            val fileContent = withContext(Dispatchers.IO) {
+                content ?: file.readText()
             }
+
+            val newTab = EditorTab(
+                file = file,
+                text = TextFieldValue(fileContent),
+                lastSavedText = fileContent
+            )
+
+            val activeTab = appState.activeTab
+            if (
+                appState.tabs.size == 1 &&
+                activeTab != null &&
+                activeTab.file == null &&
+                activeTab.text.text.isEmpty() &&
+                !activeTab.isModified
+            ) {
+                appState.tabs[0] = newTab
+            } else {
+                appState.tabs.add(newTab)
+                appState.activeTabIndex = appState.tabs.size - 1
+            }
+            appState.output = ""
+            appState.terminalInput = ""
+            appState.isLoadingFile = false
+            appState.loadingFileName = null
         }
     }
 
@@ -117,12 +121,14 @@ class FileManager(private val appState: AppState) {
             )
         }
     }
-    
+
     fun closeTab(index: Int) {
-        if (appState.tabs[index].isModified) {
-            val tab = appState.tabs[index]
-            if (tab.file != null) {
-                saveFile(tab.file, tab.text.text)
+        val tabToClose = appState.tabs[index]
+        appState.removeScrollStateFor(tabToClose)
+
+        if (tabToClose.isModified) {
+            if (tabToClose.file != null) {
+                saveFile(tabToClose.file, tabToClose.text.text)
             } else {
                 appState.activeTabIndex = index
                 saveCurrentFile()
@@ -144,7 +150,6 @@ class FileManager(private val appState: AppState) {
             } else {
                 file.delete()
             }
-            // Close tab if deleted file was open
             val tabIndex = appState.tabs.indexOfFirst { it.file == file }
             if (tabIndex != -1) {
                 appState.tabs.removeAt(tabIndex)
@@ -153,18 +158,19 @@ class FileManager(private val appState: AppState) {
                 }
             }
         }
+        appState.projectTreeRefreshTrigger++
     }
 
     fun createNewFile(parent: java.io.File, name: String) {
         val newFile = java.io.File(parent, name)
-        if (newFile.exists()) return // Or show error
+        if (newFile.exists()) return
 
         if (name.contains("/") || name.contains("\\")) {
-            // It might be a path, let's just create it as a file for now or handle directories
             newFile.parentFile.mkdirs()
         }
 
         newFile.createNewFile()
+        appState.projectTreeRefreshTrigger++
         openFile(newFile)
     }
 
@@ -175,21 +181,49 @@ class FileManager(private val appState: AppState) {
 
     fun pasteFiles(targetFolder: java.io.File) {
         val destination = if (targetFolder.isDirectory) targetFolder else targetFolder.parentFile
+        val skipped = mutableListOf<String>()
+
         appState.clipboardFiles.forEach { file ->
+            if (!file.exists()) {
+                skipped.add(file.name)
+                return@forEach
+            }
+
             val destFile = java.io.File(destination, file.name)
-            if (appState.isCutOperation) {
-                file.renameTo(destFile)
-            } else {
-                if (file.isDirectory) {
-                    file.copyRecursively(destFile, overwrite = true)
-                } else {
-                    file.copyTo(destFile, overwrite = true)
+
+            if (destFile.canonicalPath == file.canonicalPath) {
+                if (!appState.isCutOperation) {
+                    skipped.add("${file.name} (already here)")
                 }
+                return@forEach
+            }
+
+            try {
+                if (appState.isCutOperation) {
+                    if (!file.renameTo(destFile)) {
+                        skipped.add(file.name)
+                    }
+                } else {
+                    if (file.isDirectory) {
+                        file.copyRecursively(destFile, overwrite = true)
+                    } else {
+                        file.copyTo(destFile, overwrite = true)
+                    }
+                }
+            } catch (e: Exception) {
+                skipped.add(file.name)
             }
         }
+
         if (appState.isCutOperation) {
             appState.clipboardFiles = emptyList()
             appState.isCutOperation = false
         }
+
+        if (skipped.isNotEmpty()) {
+            appState.pasteErrorMessage = "Skipped: ${skipped.joinToString(", ")}"
+        }
+
+        appState.projectTreeRefreshTrigger++
     }
 }

@@ -90,37 +90,33 @@ private fun SidebarButton(
 }
 
 @Composable
+private fun SidebarSeparator() {
+    Box(
+        modifier = Modifier
+            .padding(vertical = 6.dp)
+            .width(32.dp)
+            .height(1.dp)
+            .background(Color(0xFF3A3A3A))
+    )
+}
+
+@Composable
 fun Sidebar(
     onNew: () -> Unit,
     onOpen: () -> Unit,
     onRun: () -> Unit,
     onSave: () -> Unit,
-    onToggleShell: () -> Unit,
+    onShowOutput: () -> Unit,
+    onShowTerminal: () -> Unit,
     onToggleProjectTree: () -> Unit
 ) {
-    val newIcon = remember {
-        loadIcon("new.png")
-    }
-
-    val openIcon = remember {
-        loadIcon("open.png")
-    }
-
-    val runIcon = remember {
-        loadIcon("run.png")
-    }
-
-    val saveIcon = remember {
-        loadIcon("save.png")
-    }
-
-    val shellIcon = remember {
-        loadIcon("shell.png")
-    }
-
-    val folderIcon = remember {
-        loadIcon("folder.png")
-    }
+    val newIcon = remember { loadIcon("new.png") }
+    val openIcon = remember { loadIcon("open.png") }
+    val runIcon = remember { loadIcon("run.png") }
+    val saveIcon = remember { loadIcon("save.png") }
+    val runConsoleIcon = remember { loadIcon("runConsole.png") }
+    val shellIcon = remember { loadIcon("shell.png") }
+    val folderIcon = remember { loadIcon("folder.png") }
 
     Column(
         modifier = Modifier
@@ -139,9 +135,7 @@ fun Sidebar(
             onClick = onNew
         )
 
-        Spacer(
-            modifier = Modifier.height(4.dp)
-        )
+        Spacer(modifier = Modifier.height(4.dp))
 
         SidebarButton(
             icon = openIcon,
@@ -149,9 +143,7 @@ fun Sidebar(
             onClick = onOpen
         )
 
-        Spacer(
-            modifier = Modifier.height(4.dp)
-        )
+        Spacer(modifier = Modifier.height(4.dp))
 
         SidebarButton(
             icon = runIcon,
@@ -159,9 +151,7 @@ fun Sidebar(
             onClick = onRun
         )
 
-        Spacer(
-            modifier = Modifier.height(4.dp)
-        )
+        Spacer(modifier = Modifier.height(4.dp))
 
         SidebarButton(
             icon = saveIcon,
@@ -169,19 +159,23 @@ fun Sidebar(
             onClick = onSave
         )
 
-        Spacer(
-            modifier = Modifier.height(4.dp)
+        SidebarSeparator()
+
+        SidebarButton(
+            icon = runConsoleIcon,
+            hint = "Output Console",
+            onClick = onShowOutput
         )
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         SidebarButton(
             icon = shellIcon,
-            hint = "Toggle Shell",
-            onClick = onToggleShell
+            hint = "Terminal",
+            onClick = onShowTerminal
         )
 
-        Spacer(
-            modifier = Modifier.height(4.dp)
-        )
+        SidebarSeparator()
 
         SidebarButton(
             icon = folderIcon,

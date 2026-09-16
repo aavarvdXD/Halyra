@@ -58,7 +58,7 @@ fun FileTree(
 
     var expandedPaths by remember { mutableStateOf(setOf(root.absolutePath)) }
 
-    val visibleItems = remember(root, expandedPaths) {
+    val visibleItems = remember(root, expandedPaths, appState.projectTreeRefreshTrigger) {
         val list = mutableListOf<FileItem>()
         fun addChildren(file: File, level: Int) {
             list.add(FileItem(file, level))
@@ -189,11 +189,13 @@ private fun FileNode(
                     }
                 }
                 .combinedClickable(
-                    onClick = {},
-                    onDoubleClick = {
+                    onClick = {
                         if (isDirectory) {
                             onToggleExpand()
-                        } else {
+                        }
+                    },
+                    onDoubleClick = {
+                        if (!isDirectory) {
                             fileManager.openFile(file)
                         }
                     }

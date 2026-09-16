@@ -1,9 +1,11 @@
 package com.aavarvd.halyra
 
+import androidx.compose.foundation.HorizontalScrollbar
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +23,7 @@ import com.aavarvd.halyra.editor.search.SearchState
 import com.aavarvd.halyra.io.FileManager
 import com.aavarvd.halyra.io.PythonRunner
 import com.aavarvd.halyra.ui.*
+import com.aavarvd.halyra.AppState.BottomPanelTab
 
 @Composable
 fun WindowScope.App(
@@ -37,8 +40,11 @@ fun WindowScope.App(
     val fileManager = remember { FileManager(appState) }
     val pythonRunner = remember { PythonRunner(appState, coroutineScope) }
     val editorInputHandler = remember { EditorInputHandler(appState) }
-    val editorScrollState = rememberScrollState()
-    val editorState = rememberEditorState(editorScrollState)
+
+    val handleCloseRequest: () -> Unit = {
+        appState.shellProcess?.stop()
+        onCloseRequest()
+    }
 
     LaunchedEffect(Unit) {
         appState.terminalHeightPx = with(density) { 160.dp.toPx() }
@@ -49,7 +55,7 @@ fun WindowScope.App(
             if (appState.anyModified) {
                 appState.showExitConfirmation = true
             } else {
-                onCloseRequest()
+                handleCloseRequest()
             }
         }
     }
@@ -60,36 +66,6 @@ fun WindowScope.App(
         fontSize = 14.sp,
         lineHeight = 20.sp,
     )
-
-    LaunchedEffect(
-        appState.activeTabIndex,
-        appState.activeTab?.text?.selection,
-        editorState.textLayout,
-        editorState.viewportHeightPx
-    ) {
-        val activeTab = appState.activeTab ?: return@LaunchedEffect
-        val layout = editorState.textLayout ?: return@LaunchedEffect
-        if (editorState.viewportHeightPx <= 0) return@LaunchedEffect
-
-        val layoutTextLength = layout.layoutInput.text.length
-        if (activeTab.text.text.length != layoutTextLength) return@LaunchedEffect
-
-        val caretOffset = activeTab.text.selection.end.coerceIn(0, layoutTextLength)
-        val cursorRect = layout.getCursorRect(caretOffset)
-
-        val scrollTarget = editorState.calculateScrollTargetForCaret(
-            currentScroll = editorScrollState.value,
-            viewportHeight = editorState.viewportHeightPx,
-            caretTop = with(density) { 8.dp.toPx() } + cursorRect.top,
-            caretBottom = with(density) { 8.dp.toPx() } + cursorRect.bottom,
-        )
-
-        if (scrollTarget != null) {
-            editorScrollState.animateScrollTo(
-                scrollTarget.coerceIn(0, editorScrollState.maxValue)
-            )
-        }
-    }
 
     MaterialTheme(
         colors = darkColors(
@@ -107,7 +83,7 @@ fun WindowScope.App(
                         if (appState.anyModified) {
                             appState.showExitConfirmation = true
                         } else {
-                            onCloseRequest()
+                            handleCloseRequest()
                         }
                     }
                 }
@@ -149,9 +125,28 @@ fun WindowScope.App(
                         onRun = {
                             pythonRunner.runCurrentFile()
                             appState.shellVisible = true
+                            appState.bottomPanelTab = BottomPanelTab.OUTPUT
                         },
                         onSave = { fileManager.saveCurrentFile() },
-                        onToggleShell = { appState.shellVisible = !appState.shellVisible },
+                        onShowOutput = {
+                            if (appState.shellVisible && appState.bottomPanelTab == BottomPanelTab.OUTPUT) {
+                                appState.shellVisible = false
+                            } else {
+                                appState.shellVisible = true
+                                appState.bottomPanelTab = BottomPanelTab.OUTPUT
+                            }
+                        },
+                        onShowTerminal = {
+                            if (appState.shellVisible && appState.bottomPanelTab == BottomPanelTab.TERMINAL) {
+                                appState.shellVisible = false
+                            } else {
+                                appState.shellVisible = true
+                                appState.bottomPanelTab = BottomPanelTab.TERMINAL
+                                if (appState.shellProcess == null || appState.shellProcess?.isRunning() != true) {
+                                    appState.startShell(coroutineScope)
+                                }
+                            }
+                        },
                         onToggleProjectTree = {
                             if (appState.projectRoot == null) {
                                 fileManager.openProjectFolder()
@@ -203,11 +198,55 @@ fun WindowScope.App(
                             NoFileOpenedView()
                         } else {
                             val activeTab = appState.activeTab!!
+
+                            // Per-tab scroll state so switching tabs preserves scroll position (fixes E-01)
+                            val editorScrollState = appState.scrollStateFor(activeTab)
+                            val editorState = remember(activeTab.id) { EditorState(editorScrollState) }
+
+                            LaunchedEffect(
+                                activeTab.id,
+                                activeTab.text.selection,
+                                editorState.textLayout,
+                                editorState.viewportHeightPx
+                            ) {
+                                val layout = editorState.textLayout ?: return@LaunchedEffect
+                                if (editorState.viewportHeightPx <= 0) return@LaunchedEffect
+
+                                val layoutTextLength = layout.layoutInput.text.length
+                                if (activeTab.text.text.length != layoutTextLength) return@LaunchedEffect
+
+                                val caretOffset = activeTab.text.selection.end.coerceIn(0, layoutTextLength)
+                                val cursorRect = layout.getCursorRect(caretOffset)
+
+                                val scrollTarget = editorState.calculateScrollTargetForCaret(
+                                    currentScroll = editorScrollState.value,
+                                    viewportHeight = editorState.viewportHeightPx,
+                                    caretTop = with(density) { 8.dp.toPx() } + cursorRect.top,
+                                    caretBottom = with(density) { 8.dp.toPx() } + cursorRect.bottom,
+                                )
+
+                                if (scrollTarget != null) {
+                                    editorScrollState.animateScrollTo(
+                                        scrollTarget.coerceIn(0, editorScrollState.maxValue)
+                                    )
+                                }
+                            }
+
                             val lineCount = activeTab.text.text.lineSequence().count().coerceAtLeast(1)
 
                             Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                                 EditorLineNumbers(lineCount, editorState, editorTextStyle)
-                                EditorPane(activeTab, editorState, editorInputHandler, editorTextStyle, Modifier.weight(1f))
+
+                                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                    EditorPane(activeTab, editorState, editorInputHandler, editorTextStyle, Modifier.fillMaxSize())
+
+                                    VerticalScrollbar(
+                                        adapter = rememberScrollbarAdapter(editorScrollState),
+                                        modifier = Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .fillMaxHeight()
+                                    )
+                                }
                             }
                         }
 
@@ -225,13 +264,23 @@ fun WindowScope.App(
                         .background(AppColors.Background.copy(alpha = 0.6f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            appState.loadingFileName?.let { "Opening \"$it\"…" }
+                                ?: "Opening file...",
+                            color = AppColors.Text,
+                            fontFamily = AppFonts.Inter,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
         }
 
         if (appState.showExitConfirmation) {
-            ExitConfirmationDialog(appState, onCloseRequest, onCloseCancelled)
+            ExitConfirmationDialog(appState, handleCloseRequest, onCloseCancelled)
         }
 
         if (appState.showFolderSelectionWarning) {
@@ -255,6 +304,16 @@ fun WindowScope.App(
                 },
                 dismissButton = {
                     Button(onClick = { appState.pendingLargeFile = null }) { Text("Cancel") }
+                }
+            )
+        }
+        appState.pasteErrorMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { appState.pasteErrorMessage = null },
+                title = { Text("Paste Issue") },
+                text = { Text(message) },
+                confirmButton = {
+                    Button(onClick = { appState.pasteErrorMessage = null }) { Text("OK") }
                 }
             )
         }

@@ -31,7 +31,7 @@ fun EditorPane(
         )
     }
 
-    val isPythonFile = activeTab.file?.name?.endsWith(".py") == true
+    val isPythonFile = activeTab.title.endsWith(".py") == true
     val pythonTransformation = remember { PythonHighLightTransformation() }
 
     CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
