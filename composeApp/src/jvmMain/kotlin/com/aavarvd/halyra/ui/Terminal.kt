@@ -1,8 +1,6 @@
 package com.aavarvd.halyra.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,16 +9,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.unit.dp
 import com.aavarvd.halyra.AppState
 import com.aavarvd.halyra.AppState.BottomPanelTab
@@ -31,7 +28,6 @@ fun Terminal(
     appState: AppState,
     modifier: Modifier = Modifier
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
     val minHeightPx = with(density) { 60.dp.toPx() }
     val maxHeightPx = with(density) { 420.dp.toPx() }
@@ -60,112 +56,98 @@ fun Terminal(
                 .padding(8.dp)
         ) {
             when (appState.bottomPanelTab) {
-                BottomPanelTab.OUTPUT -> OutputPanel(appState)
-                BottomPanelTab.TERMINAL -> ShellPanel(appState, onRestart = {
-                    appState.startShell(coroutineScope)
-                })
+                BottomPanelTab.OUTPUT -> OutputConsolePanel(appState)
+                BottomPanelTab.TERMINAL -> key(BottomPanelTab.TERMINAL) {
+                    ShellTerminalPanel(appState)
+                }
             }
         }
     }
 }
 
-private fun loadIcon(name: String): ImageBitmap {
-    val stream: java.io.InputStream =
-        Thread.currentThread()
-            .contextClassLoader
-            .getResourceAsStream("images/$name")
-            ?: error("Could not find icon: images/$name")
-
-    return stream.use { loadImageBitmap(it) }
-}
-
 @Composable
-private fun SmallIconButton(icon: ImageBitmap, hint: String, onClick: () -> Unit) {
-    Box(
+private fun OutputConsolePanel(appState: AppState) {
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(appState.output) {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
+    Text(
+        text = appState.output,
         modifier = Modifier
-            .padding(4.dp)
-            .size(20.dp)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+            .fillMaxSize()
+            .verticalScroll(scrollState),
+        color = AppColors.TerminalText,
+        fontFamily = AppFonts.JBMono
+    )
+}
+
+
+@Composable
+private fun ShellTerminalPanel(appState: AppState) {
+    val focusRequester = remember { FocusRequester() }
+    val scrollState = rememberScrollState()
+
+    val shellOutput = appState.shellOutput
+    val newlineIndex = shellOutput.lastIndexOf('\n')
+    val scrollbackText = if (newlineIndex >= 0) shellOutput.substring(0, newlineIndex + 1) else ""
+    val promptText = if (newlineIndex >= 0) shellOutput.substring(newlineIndex + 1) else shellOutput
+
+    val terminalTextStyle = LocalTextStyle.current.copy(
+        color = AppColors.TerminalText,
+        fontFamily = AppFonts.JBMono
+    )
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    LaunchedEffect(shellOutput, appState.shellInput) {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
     ) {
-        Image(bitmap = icon, contentDescription = hint, modifier = Modifier.size(16.dp))
-    }
-}
-
-@Composable
-private fun OutputPanel(appState: AppState) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = appState.output,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            color = AppColors.TerminalText,
-            fontFamily = AppFonts.JBMono
-        )
-
-        BasicTextField(
-            value = appState.terminalInput,
-            onValueChange = { appState.terminalInput = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            textStyle = LocalTextStyle.current.copy(
-                color = AppColors.TerminalText,
-                fontFamily = AppFonts.JBMono
-            ),
-            cursorBrush = SolidColor(AppColors.Cursor),
-            singleLine = true
-        )
-    }
-}
-
-@Composable
-private fun ShellPanel(appState: AppState, onRestart: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            SmallIconButton(
-                icon = remember { loadIcon("restart.png") },
-                hint = "Restart Terminal",
-                onClick = onRestart
+        if (scrollbackText.isNotEmpty()) {
+            Text(
+                text = scrollbackText,
+                modifier = Modifier.fillMaxWidth(),
+                style = terminalTextStyle
             )
         }
 
-        Text(
-            text = appState.shellOutput,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            color = AppColors.TerminalText,
-            fontFamily = AppFonts.JBMono
-        )
+        // Prompt + editable input on the same line, as the last line of the flow.
+        Row(modifier = Modifier.fillMaxWidth()) {
+            if (promptText.isNotEmpty()) {
+                Text(
+                    text = promptText,
+                    style = terminalTextStyle
+                )
+            }
 
-        BasicTextField(
-            value = appState.shellInput,
-            onValueChange = { appState.shellInput = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-                .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
-                        appState.shellProcess?.sendInput(appState.shellInput)
-                        appState.shellInput = ""
-                        true
-                    } else {
-                        false
-                    }
-                },
-            textStyle = LocalTextStyle.current.copy(
-                color = AppColors.TerminalText,
-                fontFamily = AppFonts.JBMono
-            ),
-            cursorBrush = SolidColor(AppColors.Cursor),
-            singleLine = true
-        )
+            BasicTextField(
+                value = appState.shellInput,
+                onValueChange = { appState.shellInput = it },
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .focusRequester(focusRequester)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                            appState.shellProcess?.sendInput(appState.shellInput)
+                            appState.shellInput = ""
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                textStyle = terminalTextStyle,
+                cursorBrush = SolidColor(AppColors.Cursor),
+                singleLine = true
+            )
+        }
     }
 }
