@@ -67,22 +67,75 @@ fun Terminal(
 
 @Composable
 private fun OutputConsolePanel(appState: AppState) {
+    val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
+    val isRunning = appState.pythonProcess != null
 
-    LaunchedEffect(appState.output) {
-        scrollState.animateScrollTo(scrollState.maxValue)
-    }
+    val output = appState.output
+    val newlineIndex = output.lastIndexOf('\n')
+    val scrollbackText = if (newlineIndex >= 0) output.substring(0, newlineIndex + 1) else ""
+    val promptText = if (newlineIndex >= 0) output.substring(newlineIndex + 1) else output
 
-    Text(
-        text = appState.output,
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState),
+    val terminalTextStyle = LocalTextStyle.current.copy(
         color = AppColors.TerminalText,
         fontFamily = AppFonts.JBMono
     )
-}
 
+    LaunchedEffect(appState.pythonProcess) {
+        if (isRunning) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(output, appState.terminalInput) {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+    ) {
+        if (scrollbackText.isNotEmpty()) {
+            Text(
+                text = scrollbackText,
+                modifier = Modifier.fillMaxWidth(),
+                style = terminalTextStyle
+            )
+        }
+
+        if (isRunning) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                if (promptText.isNotEmpty()) {
+                    Text(text = promptText, style = terminalTextStyle)
+                }
+
+                BasicTextField(
+                    value = appState.terminalInput,
+                    onValueChange = { appState.terminalInput = it },
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .focusRequester(focusRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                                appState.pythonProcess?.sendInput(appState.terminalInput)
+                                appState.output += appState.terminalInput + "\n"
+                                appState.terminalInput = ""
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                    textStyle = terminalTextStyle,
+                    cursorBrush = SolidColor(AppColors.Cursor),
+                    singleLine = true
+                )
+            }
+        } else if (promptText.isNotEmpty()) {
+            Text(text = promptText, style = terminalTextStyle)
+        }
+    }
+}
 
 @Composable
 private fun ShellTerminalPanel(appState: AppState) {
@@ -119,8 +172,6 @@ private fun ShellTerminalPanel(appState: AppState) {
                 style = terminalTextStyle
             )
         }
-
-        // Prompt + editable input on the same line, as the last line of the flow.
         Row(modifier = Modifier.fillMaxWidth()) {
             if (promptText.isNotEmpty()) {
                 Text(

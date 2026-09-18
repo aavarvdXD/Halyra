@@ -105,6 +105,8 @@ fun Sidebar(
     onNew: () -> Unit,
     onOpen: () -> Unit,
     onRun: () -> Unit,
+    onStop: () -> Unit,
+    isRunning: Boolean,
     onSave: () -> Unit,
     onShowOutput: () -> Unit,
     onShowTerminal: () -> Unit,
@@ -113,6 +115,7 @@ fun Sidebar(
     val newIcon = remember { loadIcon("new.png") }
     val openIcon = remember { loadIcon("open.png") }
     val runIcon = remember { loadIcon("run.png") }
+    val stopIcon = remember { loadIcon("stop.png") }
     val saveIcon = remember { loadIcon("save.png") }
     val runConsoleIcon = remember { loadIcon("runConsole.png") }
     val shellIcon = remember { loadIcon("shell.png") }
@@ -123,64 +126,29 @@ fun Sidebar(
             .fillMaxHeight()
             .width(56.dp)
             .background(Color(0xFF1E1E1E))
-            .padding(
-                vertical = 6.dp,
-                horizontal = 4.dp
-            ),
+            .padding(vertical = 6.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        SidebarButton(
-            icon = newIcon,
-            hint = "New File",
-            onClick = onNew
-        )
-
+        SidebarButton(icon = newIcon, hint = "New File", onClick = onNew)
+        Spacer(modifier = Modifier.height(4.dp))
+        SidebarButton(icon = openIcon, hint = "Open File", onClick = onOpen)
         Spacer(modifier = Modifier.height(4.dp))
 
-        SidebarButton(
-            icon = openIcon,
-            hint = "Open File",
-            onClick = onOpen
-        )
+        if (isRunning) {
+            SidebarButton(icon = stopIcon, hint = "Stop", onClick = onStop)
+        } else {
+            SidebarButton(icon = runIcon, hint = "Run Python", onClick = onRun)
+        }
 
         Spacer(modifier = Modifier.height(4.dp))
-
-        SidebarButton(
-            icon = runIcon,
-            hint = "Run Python",
-            onClick = onRun
-        )
-
+        SidebarButton(icon = saveIcon, hint = "Save File", onClick = onSave)
         Spacer(modifier = Modifier.height(4.dp))
+        SidebarButton(icon = folderIcon, hint = "Project Structure", onClick = onToggleProjectTree)
 
-        SidebarButton(
-            icon = saveIcon,
-            hint = "Save File",
-            onClick = onSave
-        )
+        Spacer(modifier = Modifier.weight(1f))
 
-        SidebarSeparator()
-
-        SidebarButton(
-            icon = runConsoleIcon,
-            hint = "Output Console",
-            onClick = onShowOutput
-        )
-
+        SidebarButton(icon = runConsoleIcon, hint = "Output Console", onClick = onShowOutput)
         Spacer(modifier = Modifier.height(4.dp))
-
-        SidebarButton(
-            icon = shellIcon,
-            hint = "Terminal",
-            onClick = onShowTerminal
-        )
-
-        SidebarSeparator()
-
-        SidebarButton(
-            icon = folderIcon,
-            hint = "Project Structure",
-            onClick = onToggleProjectTree
-        )
+        SidebarButton(icon = shellIcon, hint = "Terminal", onClick = onShowTerminal)
     }
 }

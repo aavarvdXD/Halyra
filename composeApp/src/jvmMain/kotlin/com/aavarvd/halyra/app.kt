@@ -127,6 +127,8 @@ fun WindowScope.App(
                             appState.shellVisible = true
                             appState.bottomPanelTab = BottomPanelTab.OUTPUT
                         },
+                        onStop = { pythonRunner.stopPython() },
+                        isRunning = appState.pythonProcess != null,
                         onSave = { fileManager.saveCurrentFile() },
                         onShowOutput = {
                             if (appState.shellVisible && appState.bottomPanelTab == BottomPanelTab.OUTPUT) {
