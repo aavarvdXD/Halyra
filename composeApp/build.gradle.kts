@@ -20,6 +20,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            @Suppress("DEPRECATION")
             implementation(compose.materialIconsExtended)
         }
         commonTest.dependencies {
@@ -39,14 +40,12 @@ compose.desktop {
 
         nativeDistributions {
             val osName = System.getProperty("os.name").lowercase()
-            targetFormats(
-                when {
-                    osName.contains("windows") -> listOf(TargetFormat.Msi, TargetFormat.Exe)
-                    osName.contains("linux") -> listOf(TargetFormat.Deb, TargetFormat.Rpm)
-                    osName.contains("mac") -> listOf(TargetFormat.Pkg, TargetFormat.Dmg)
-                    else -> listOf(TargetFormat.Deb)
-                }
-            )
+            targetFormats(*when {
+                osName.contains("windows") -> arrayOf(TargetFormat.Msi, TargetFormat.Exe)
+                osName.contains("linux") -> arrayOf(TargetFormat.Deb, TargetFormat.Rpm)
+                osName.contains("mac") -> arrayOf(TargetFormat.Pkg, TargetFormat.Dmg)
+                else -> arrayOf(TargetFormat.Deb)
+            })
             packageName = "Halyra"
             packageVersion = "0.0.2"
             modules("java.instrument", "jdk.unsupported")
