@@ -38,9 +38,18 @@ compose.desktop {
         mainClass = "com.aavarvd.halyra.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe)
+            val osName = System.getProperty("os.name").lowercase()
+            targetFormats(
+                when {
+                    osName.contains("windows") -> listOf(TargetFormat.Msi, TargetFormat.Exe)
+                    osName.contains("linux") -> listOf(TargetFormat.Deb, TargetFormat.Rpm)
+                    osName.contains("mac") -> listOf(TargetFormat.Pkg, TargetFormat.Dmg)
+                    else -> listOf(TargetFormat.Deb)
+                }
+            )
             packageName = "Halyra"
             packageVersion = "0.0.2"
+            modules("java.instrument", "jdk.unsupported")
         }
     }
 }
