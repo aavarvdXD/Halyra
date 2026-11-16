@@ -35,6 +35,8 @@ class PythonHighLightTransformation : VisualTransformation {
                 TokenType.FUNCTION_NAME -> Color(0xFF56B6C2)
                 TokenType.CLASS_NAME    -> Color(0xFFE5C078)
                 TokenType.FUNCTION_CALL -> Color(0xFF61AFEF)
+                TokenType.SPECIAL_METHOD -> Color(0xFFB200B2)
+                TokenType.SPECIAL_ATTRIBUTE, TokenType.SELF -> Color(0xFF94558D)
                 else -> null
             }
 

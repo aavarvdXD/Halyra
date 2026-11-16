@@ -5,6 +5,9 @@ enum class TokenType {
     FUNCTION_NAME,
     CLASS_NAME,
     FUNCTION_CALL,
+    SPECIAL_METHOD,
+    SPECIAL_ATTRIBUTE,
+    SELF,
 
     KEYWORD,
     IDENTIFIER,

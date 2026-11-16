@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
@@ -22,6 +25,12 @@ import androidx.compose.ui.unit.dp
 import com.aavarvd.halyra.AppState
 import com.aavarvd.halyra.AppState.BottomPanelTab
 import java.awt.Cursor
+
+private val terminalSelectionColors = TextSelectionColors(
+    handleColor = AppColors.SelectionHandle,
+    backgroundColor = AppColors.SelectionBackground
+)
+
 
 @Composable
 fun Terminal(
@@ -91,48 +100,52 @@ private fun OutputConsolePanel(appState: AppState) {
         scrollState.animateScrollTo(scrollState.maxValue)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-    ) {
-        if (scrollbackText.isNotEmpty()) {
-            Text(
-                text = scrollbackText,
-                modifier = Modifier.fillMaxWidth(),
-                style = terminalTextStyle
-            )
-        }
-
-        if (isRunning) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                if (promptText.isNotEmpty()) {
-                    Text(text = promptText, style = terminalTextStyle)
+    CompositionLocalProvider(LocalTextSelectionColors provides terminalSelectionColors) {
+        SelectionContainer {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+            ) {
+                if (scrollbackText.isNotEmpty()) {
+                    Text(
+                        text = scrollbackText,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = terminalTextStyle
+                    )
                 }
 
-                BasicTextField(
-                    value = appState.terminalInput,
-                    onValueChange = { appState.terminalInput = it },
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .focusRequester(focusRequester)
-                        .onPreviewKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
-                                appState.pythonProcess?.sendInput(appState.terminalInput)
-                                appState.output += appState.terminalInput + "\n"
-                                appState.terminalInput = ""
-                                true
-                            } else {
-                                false
-                            }
-                        },
-                    textStyle = terminalTextStyle,
-                    cursorBrush = SolidColor(AppColors.Cursor),
-                    singleLine = true
-                )
+                if (isRunning) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        if (promptText.isNotEmpty()) {
+                            Text(text = promptText, style = terminalTextStyle)
+                        }
+
+                        BasicTextField(
+                            value = appState.terminalInput,
+                            onValueChange = { appState.terminalInput = it },
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .focusRequester(focusRequester)
+                                .onPreviewKeyEvent { event ->
+                                    if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                                        appState.pythonProcess?.sendInput(appState.terminalInput)
+                                        appState.output += appState.terminalInput + "\n"
+                                        appState.terminalInput = ""
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                },
+                            textStyle = terminalTextStyle,
+                            cursorBrush = SolidColor(AppColors.Cursor),
+                            singleLine = true
+                        )
+                    }
+                } else if (promptText.isNotEmpty()) {
+                    Text(text = promptText, style = terminalTextStyle)
+                }
             }
-        } else if (promptText.isNotEmpty()) {
-            Text(text = promptText, style = terminalTextStyle)
         }
     }
 }
@@ -160,45 +173,47 @@ private fun ShellTerminalPanel(appState: AppState) {
         scrollState.animateScrollTo(scrollState.maxValue)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-    ) {
-        if (scrollbackText.isNotEmpty()) {
-            Text(
-                text = scrollbackText,
-                modifier = Modifier.fillMaxWidth(),
-                style = terminalTextStyle
-            )
-        }
-        Row(modifier = Modifier.fillMaxWidth()) {
-            if (promptText.isNotEmpty()) {
-                Text(
-                    text = promptText,
-                    style = terminalTextStyle
-                )
-            }
-
-            BasicTextField(
-                value = appState.shellInput,
-                onValueChange = { appState.shellInput = it },
+    CompositionLocalProvider(LocalTextSelectionColors provides terminalSelectionColors) {
+        SelectionContainer {
+            Column(
                 modifier = Modifier
-                    .weight(1f, fill = false)
-                    .focusRequester(focusRequester)
-                    .onPreviewKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
-                            appState.shellProcess?.sendInput(appState.shellInput)
-                            appState.shellInput = ""
-                            true
-                        } else {
-                            false
-                        }
-                    },
-                textStyle = terminalTextStyle,
-                cursorBrush = SolidColor(AppColors.Cursor),
-                singleLine = true
-            )
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+            ) {
+                if (scrollbackText.isNotEmpty()) {
+                    Text(
+                        text = scrollbackText,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = terminalTextStyle
+                    )
+                }
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    if (promptText.isNotEmpty()) {
+                        Text(text = promptText, style = terminalTextStyle)
+                    }
+
+                    BasicTextField(
+                        value = appState.shellInput,
+                        onValueChange = { appState.shellInput = it },
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .focusRequester(focusRequester)
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                                    appState.shellProcess?.sendInput(appState.shellInput)
+                                    appState.shellInput = ""
+                                    true
+                                } else {
+                                    false
+                                }
+                            },
+                        textStyle = terminalTextStyle,
+                        cursorBrush = SolidColor(AppColors.Cursor),
+                        singleLine = true
+                    )
+                }
+            }
         }
     }
 }

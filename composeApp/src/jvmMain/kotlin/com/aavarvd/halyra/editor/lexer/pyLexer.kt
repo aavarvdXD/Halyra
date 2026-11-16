@@ -61,6 +61,63 @@ class PyLexer {
         "&", "|", "^", "~"
     )
 
+    private val stringPrefixes = setOf(
+        "r", "u", "b", "f",
+        "br", "rb",
+        "fr", "rf"
+    )
+
+    private fun findStringStart(code: String, index: Int): Int? {
+        if (index >= code.length) return null
+
+        if (code[index] == '"' || code[index] == '\'')
+            return index
+
+        for (length in 1..2) {
+            val end = index + length
+            if (end >= code.length) continue
+
+            val prefix = code.substring(index, end).lowercase()
+            if (prefix in stringPrefixes && (code[end]== '"' || code[end] == '\'')) return end
+        }
+        return null
+    }
+
+    private fun scanString(code: String, start: Int, quoteIndex: Int): Int {
+        val quote = code[quoteIndex]
+
+        val isTtriple =
+            quoteIndex + 2 < code.length &&
+            code[quoteIndex + 1] == quote &&
+            code[quoteIndex + 2] == quote
+
+        val delimiter = if (isTtriple) 3 else 1
+
+        var i = quoteIndex + delimiter
+
+        while (i < code.length) {
+            if (code[i] == '\\') {
+                i += 2
+                continue
+            }
+
+            if (
+                code[i] == quote &&
+                (!isTtriple || (
+                    i + 2 < code.length &&
+                    code[i + 1] == quote &&
+                    code[i + 2] == quote
+                ))
+            ) return i + delimiter
+
+            if (!isTtriple && code[i] == '\n') return i
+
+            i++
+        }
+
+        return code.length
+    }
+
     fun tokenize(code: String): List<Token> {
         val tokens = mutableListOf<Token>()
 
@@ -91,20 +148,11 @@ class PyLexer {
             when {
 
                 // String
-                c == '"' || c == '\'' -> {
-
+                findStringStart(code, i) != null -> {
                     val start = i
-                    val quote = c
+                    val quoteIndex = findStringStart(code, i)!!
 
-                    i++
-
-                    while (i < code.length && code[i] != quote) {
-                        i++
-                    }
-
-                    if (i < code.length) {
-                        i++
-                    }
+                    i = scanString(code, start, quoteIndex)
 
                     tokens += Token(
                         TokenType.STRING,
@@ -312,9 +360,17 @@ fun main() {
 //    )
     val tokens = lexer.tokenize(
         """
-    # This is a comment
-    print("Hello") # greeting
-    print("# not a comment")
+    message = "Hello \"world\""
+    path = r"C:\Users\Player"
+    data = b"Hello"
+    formatted = f"Hello {name}"
+    combined = fr"Hello {name}"
+    multiline = """ + "\"\"\"" + """
+    Hello
+    world
+    """ + "\"\"\"" + """
+    single = '''Hello
+    world'''
     """.trimIndent()
     )
 
