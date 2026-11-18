@@ -118,6 +118,55 @@ class PyLexer {
         return code.length
     }
 
+    private fun scanNumber(code: String, start: Int): Int {
+        var i = start
+
+        if (
+            i + 1 < code.length &&
+            code[i] == '0' &&
+            code[i + 1].lowercaseChar() in "xbo"
+        ) {
+            val base = code[i + 1].lowercaseChar()
+            i += 2
+
+            while (i < code.length) {
+                val c = code[i]
+
+                val valid = when (base) {
+                    'x' -> c.isDigit() || c.lowercaseChar() in 'a'..'f'
+                    'b' -> c == '0' || c == '1'
+                    'o' -> c in '0'..'7'
+                    else -> false
+                }
+
+                if (valid || c == '_') i++ else break
+            }
+
+            return i
+        }
+
+        while (i < code.length && (code[i].isDigit() || code[i] == '_')) i++
+
+        if (i < code.length && code[i] == '.') {
+            i++
+
+            while (i < code.length && (code[i].isDigit() || code[i] == '_')) i++
+        }
+
+        if (i < code.length && code[i].lowercaseChar() == 'e') {
+            i++
+
+            if (i < code.length && (code[i] == '+' || code[i] == '-')) i++
+
+            while (i < code.length && (code[i].isDigit() || code[i] == '_')) i++
+        }
+
+        // Complex suffix
+        if (i < code.length && code[i].lowercaseChar() == 'j') i++
+
+        return i
+    }
+
     fun tokenize(code: String): List<Token> {
         val tokens = mutableListOf<Token>()
 
@@ -200,12 +249,7 @@ class PyLexer {
                 c.isDigit() -> {
                     val start = i
 
-                    while (i < code.length && code[i].isDigit()) i++
-
-                    if (i < code.length && code[i] == '.') {
-                        i++
-                        while (i < code.length && code[i].isDigit()) i++
-                    }
+                    i = scanNumber(code, start)
 
                     tokens += Token(
                         TokenType.NUMBER,
@@ -371,6 +415,14 @@ fun main() {
     """ + "\"\"\"" + """
     single = '''Hello
     world'''
+    integer = 42
+    decimal = 3.14159
+    hexadecimal = 0xFF
+    binary = 0b1010
+    octal = 0o17
+    scientific = 1.5e-3
+    underscores = 1_000_000
+    complex = 3j
     """.trimIndent()
     )
 
