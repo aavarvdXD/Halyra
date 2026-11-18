@@ -48,6 +48,11 @@ compose.desktop {
             })
             packageName = "Halyra"
             packageVersion = "0.0.2"
+            macOS {
+                packageVersion = "1.0.0"
+                dmgPackageVersion = "1.0.0"
+                pkgPackageVersion = "1.0.0"
+            }
             modules("java.instrument", "jdk.unsupported")
         }
     }
