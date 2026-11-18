@@ -47,7 +47,7 @@ compose.desktop {
                 else -> arrayOf(TargetFormat.Deb)
             })
             packageName = "Halyra"
-            packageVersion = "0.0.2"
+            packageVersion = "1.0.0"
             modules("java.instrument", "jdk.unsupported")
         }
     }
