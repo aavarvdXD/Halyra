@@ -15,7 +15,7 @@ cd Halyra
 **Requires Java 17 or higher and Python installed and available on** `PATH`  
 If you're on Windows, execute `gradlew.bat createDistributable` instead of `./gradlew createDistributable`  
 
-If you just want to run it then use run instead of building, or you could also visit the releases page for direct download
+If you just want to run it then use `run` instead of `createDistributable`, or you could also visit the releases page for direct download
 
 ---
 ## Features
