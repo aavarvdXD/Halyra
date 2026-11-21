@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.key.*
 import kotlin.math.roundToInt
 import com.aavarvd.halyra.ui.AppColors
 import com.aavarvd.halyra.editor.completion.CompletionEngine
@@ -88,7 +89,41 @@ fun EditorPane(
                     .onSizeChanged { editorState.viewportHeightPx = it.height }
                     .verticalScroll(editorState.scrollState)
                     .padding(start = 4.dp, top = 8.dp, end = 8.dp, bottom = 8.dp)
-                    .onPreviewKeyEvent { inputHandler.handleKeyEvent(it) },
+                    .onPreviewKeyEvent { event ->
+                        if (
+                            event.type == KeyEventType.KeyDown &&
+                            completionState.isVisible
+                        ) {
+                            when (event.key) {
+                                Key.DirectionDown -> {
+                                    completionState.moveSelection(1)
+                                    true
+                                }
+
+                                Key.DirectionUp -> {
+                                    completionState.moveSelection(-1)
+                                    true
+                                }
+
+                                Key.Enter, Key.Tab -> {
+                                    completionState.selectedItem?.let { item ->
+                                        inputHandler.acceptCompletion(item.insertText)
+                                        completionState.hide()
+                                    }
+                                    true
+                                }
+
+                                Key.Escape -> {
+                                    completionState.hide()
+                                    true
+                                }
+
+                                else -> inputHandler.handleKeyEvent(event)
+                            }
+                        } else {
+                            inputHandler.handleKeyEvent(event)
+                        }
+                    },
                 textStyle = textStyle,
                 cursorBrush = SolidColor(AppColors.Cursor),
                 visualTransformation = if (isPythonFile) pythonTransformation else VisualTransformation.None,
@@ -103,9 +138,10 @@ fun EditorPane(
             ) {
                 CompletionPopup(
                     items = completionState.suggestions,
-                    selectedIndex = 0,
+                    selectedIndex = completionState.selectedIndex,
                     onSelect = { item ->
-                        //TODO: Aceptance
+                        inputHandler.acceptCompletion(item.insertText)
+                        completionState.hide()
                     },
                     modifier = Modifier.offset { popupOffset }
                 )

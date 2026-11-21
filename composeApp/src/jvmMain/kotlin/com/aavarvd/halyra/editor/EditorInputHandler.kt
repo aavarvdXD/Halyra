@@ -115,4 +115,30 @@ class EditorInputHandler(private val appState: AppState) {
         }
         return false
     }
+
+    fun acceptCompletion(insertText: String) {
+        val activeTab = appState.activeTab ?: return
+        val activeTabIndex = appState.activeTabIndex
+
+        val text = activeTab.text.text
+        val cursor = activeTab.text.selection.start
+
+        if (!activeTab.text.selection.collapsed) return
+
+        val prefixStart = text.substring(0, cursor)
+            .indexOfLast { !it.isLetterOrDigit() && it != '_' } + 1
+
+        val finalText = text.substring(0, prefixStart) +
+            insertText +
+            text.substring(cursor)
+
+        val newCursor = prefixStart + insertText.length
+
+        appState.tabs[activeTabIndex] = activeTab.copy(
+            text = TextFieldValue(
+                finalText,
+                selection = TextRange(newCursor)
+            )
+        )
+    }
 }

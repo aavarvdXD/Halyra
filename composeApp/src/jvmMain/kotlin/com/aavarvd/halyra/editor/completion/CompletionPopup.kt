@@ -52,7 +52,9 @@ fun CompletionPopup(
                         else Color.Transparent
                     )
                     .clickable { onSelect(item) }
-                    .padding(horizontal = 9.dp, vertical = 7.dp)
+                    .padding(horizontal = 9.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 CompletionKindIcon(item.kind)
 
@@ -114,7 +116,7 @@ private fun CompletionKindIcon(kind: CompletionKind) {
 
     Box(
         modifier = Modifier
-            .size(22.dp)
+            .size(20.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(color.copy(alpha = 0.13f)),
         contentAlignment = Alignment.Center

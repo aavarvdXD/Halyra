@@ -21,11 +21,36 @@ class CompletionEngine {
     )
 
     private val builtins = setOf(
-        "print", "input", "len",
-        "range", "sum", "min", "max",
-        "abs", "open", "type",
-        "int", "float", "str",
-        "list", "dict", "set"
+        "print", "input",
+
+        "bool", "int", "float", "complex",
+        "str", "list", "tuple", "dict",
+        "set", "frozenset", "bytes", "bytearray",
+
+        "abs", "round", "pow", "divmod",
+        "sum", "min", "max",
+
+        "range", "enumerate", "zip",
+        "map", "filter", "iter", "next",
+        "reversed", "sorted",
+
+        "type", "isinstance", "issubclass",
+        "id", "hash", "callable", "hasattr",
+        "getattr", "setattr", "delattr",
+        "dir", "vars", "globals", "locals",
+
+        "repr", "ascii", "format", "ord", "chr",
+
+        "len", "all", "any",
+
+        "open", "compile", "eval", "exec",
+
+        "object", "super", "property",
+        "classmethod", "staticmethod",
+
+        "help", "breakpoint", "memoryview",
+        "slice", "aiter", "anext",
+        "__import__"
     )
 
     private val items = buildList {
