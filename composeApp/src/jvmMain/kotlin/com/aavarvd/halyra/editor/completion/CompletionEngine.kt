@@ -1,5 +1,7 @@
 package com.aavarvd.halyra.editor.completion
 
+import com.aavarvd.halyra.editor.lexer.PyLexer
+import com.aavarvd.halyra.editor.lexer.TokenType
 class CompletionEngine {
     private val keywords = setOf(
         "False", "None", "True",
@@ -53,7 +55,7 @@ class CompletionEngine {
         "__import__"
     )
 
-    private val items = buildList {
+    private val generalItems = buildList {
         keywords.forEach {
             add(CompletionItem(it, it, CompletionKind.KEYWORD))
         }
@@ -62,29 +64,48 @@ class CompletionEngine {
         }
     }
 
+    private val contextDetector = CompletionContextDetector()
+
     fun complete(
         text: String,
         cursor: Int
     ): List<CompletionItem> {
         if (cursor !in 0..text.length) return emptyList()
 
+        val context = contextDetector.detect(text, cursor)
+
+        if (context == CompletionContext.NONE) return emptyList()
+
         val prefixStart = text.substring(0, cursor)
             .indexOfLast { !it.isLetterOrDigit() && it != '_' } + 1
 
         val prefix = text.substring(prefixStart, cursor)
 
-        if (prefix.isEmpty()) return emptyList()
+        if (prefix.isEmpty() || prefix.first().isDigit()) return emptyList()
 
-        if (prefix.first().isDigit()) return emptyList()
+        val candidates = when (context) {
+            CompletionContext.GENERAL -> generalItems
+            CompletionContext.MEMBER -> emptyList()
+            else -> emptyList()
+        }
 
-        return items.filter {
-            it.label.startsWith(prefix, ignoreCase = true)
-        }.sortedBy { it.label }
+        return candidates
+            .filter { it.label.startsWith(prefix, ignoreCase = true) }
+            .sortedBy { it.label }
     }
 }
 // Test
 fun main() {
-    val engine = CompletionEngine()
-    val suggestions = engine.complete("e", 1)
-    suggestions.forEach(::println)
+    val detector = CompletionContextDetector()
+
+    val tests = listOf(
+        "pri" to 3,
+        "player.health" to 13,
+        "\"hello\"" to 4,
+        "# comment" to 5
+    )
+
+    tests.forEach { (text, cursor) ->
+        println("$text -> ${detector.detect(text, cursor)}")
+    }
 }
