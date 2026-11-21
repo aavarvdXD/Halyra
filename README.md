@@ -6,36 +6,25 @@ A lightweight Python IDE for fast prototyping of your choice
 ![Halyra](images/screenshot.png)
 
 ---
-## Build It Youself!
+## Building
 ```bash
 git clone https://github.com/aavarvdXD/Halyra.git
 cd Halyra
-./gradlew run
+./gradlew createDistributable
 ```
 **Requires Java 17 or higher and Python installed and available on** `PATH`  
-If you're on Windows, execute `gradlew.bat run` instead of `./gradlew run`  
+If you're on Windows, execute `gradlew.bat createDistributable` instead of `./gradlew createDistributable`  
 
-You don't want to build youself? the releases page is made for you
+If you just want to run it then use run instead of building, or you could also visit the releases page for direct download
 
 ---
-## Project Features
+## Features
 - **Prototyping Mode**: Execute Python code directly from the editor without needing to save a file first. If no file is saved, a temporary `halyra_proto_*.py` file is created and deleted after execution.
 - **Multi-Tab Support**: Open multiple files, switch between them, and scroll through tabs when they exceed the screen width
 - **Smart Editor**: 
     - Auto-closing of `()`, `[]`, `{}`, `"`, and `'`.
     - Type-over support: If the user types a closing character that matches the auto-inserted one at the caret, the caret just moves forward
     - Python-style auto-indentation: Automatically adds current indentation + 4 spaces after a newline following `:`
-    - Custom backspace: Deletes 4 spaces at once if they form an indentation block
+    - Code Completion: Type with a popup recommending you what to type next
 - **Integrated Terminal**: Resizable vertical terminal for output and input
-- **Safety**: Unsaved changes detection across all tabs with an exit confirmation dialog
 - **Project Explorer**: A file tree with icons for quick navigation and file management
-
----
-
-## How it Works
-Halyra is built with Kotlin and Compose Multiplatform, structured around a small set of focused components rather than one UI file: `AppState` holds centralized app state, `FileManager` owns the file/tab lifecycle, and `PythonProcess`/`ShellProcess` each wrap a persistent subprocess for running code and driving an interactive shell
-
----
-
-## Acknowledgements
-Built with Compose Multiplatform and the JetBrains Mono typeface
