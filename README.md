@@ -23,7 +23,6 @@ If you just want to run it then use `run` instead of `createDistributable`, or y
 - **Multi-Tab Support**: Open multiple files, switch between them, and scroll through tabs when they exceed the screen width
 - **Smart Editor**: 
     - Auto-closing of `()`, `[]`, `{}`, `"`, and `'`.
-    - Type-over support: If the user types a closing character that matches the auto-inserted one at the caret, the caret just moves forward
     - Python-style auto-indentation: Automatically adds current indentation + 4 spaces after a newline following `:`
     - Code Completion: Type with a popup recommending you what to type next
 - **Integrated Terminal**: Resizable vertical terminal for output and input
