@@ -65,6 +65,7 @@ class CompletionEngine {
     }
 
     private val contextDetector = CompletionContextDetector()
+    private val symbolCollector = SymbolCollector()
 
     fun complete(
         text: String,
@@ -84,7 +85,8 @@ class CompletionEngine {
         if (prefix.isEmpty() || prefix.first().isDigit()) return emptyList()
 
         val candidates = when (context) {
-            CompletionContext.GENERAL -> generalItems
+            CompletionContext.GENERAL ->
+                symbolCollector.collect(text) + generalItems
             CompletionContext.MEMBER -> emptyList()
             else -> emptyList()
         }
@@ -96,16 +98,20 @@ class CompletionEngine {
 }
 // Test
 fun main() {
-    val detector = CompletionContextDetector()
+    val collector = SymbolCollector()
 
-    val tests = listOf(
-        "pri" to 3,
-        "player.health" to 13,
-        "\"hello\"" to 4,
-        "# comment" to 5
-    )
+    val code = """
+        player = Player()
 
-    tests.forEach { (text, cursor) ->
-        println("$text -> ${detector.detect(text, cursor)}")
-    }
+        def calculate_damage():
+            pass
+
+        class Enemy:
+            pass
+
+        for enemy in enemies:
+            pass
+    """.trimIndent()
+
+    collector.collect(code).forEach(::println)
 }

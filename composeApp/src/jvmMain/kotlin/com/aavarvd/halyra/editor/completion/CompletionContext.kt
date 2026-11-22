@@ -5,5 +5,6 @@ enum class CompletionContext {
     MEMBER,
     IMPORT,
     MODULE,
-    NONE
+    NONE,
+    DECLARATION,
 }

@@ -30,12 +30,23 @@ class CompletionContextDetector() {
 
         val previousToken = tokens.lastOrNull {
             it.end <= prefixStart &&
-                it.type != TokenType.WHITESPACE &&
-                it.type != TokenType.NEWLINE
+                    it.type != TokenType.WHITESPACE &&
+                    it.type != TokenType.NEWLINE
         }
 
-        if (previousToken?.type == TokenType.DOT) return CompletionContext.MEMBER
+        return when {
+            previousToken?.type == TokenType.DOT ->
+                CompletionContext.MEMBER
 
-        return CompletionContext.GENERAL
+            previousToken?.text == "def" ||
+                    previousToken?.text == "class" ->
+                CompletionContext.DECLARATION
+
+            previousToken?.text == "import" ||
+                    previousToken?.text == "from" ->
+                CompletionContext.MODULE
+
+            else -> CompletionContext.GENERAL
+        }
     }
 }
