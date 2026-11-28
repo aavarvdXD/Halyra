@@ -35,8 +35,6 @@ class FileManager(private val appState: AppState) {
         if (folder != null && folder.isDirectory) {
             appState.projectRoot = folder
             appState.projectTreeVisible = true
-        } else {
-            appState.showFolderSelectionWarning = true
         }
     }
 

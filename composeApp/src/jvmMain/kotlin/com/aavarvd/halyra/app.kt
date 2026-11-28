@@ -1,6 +1,5 @@
 package com.aavarvd.halyra
 
-import androidx.compose.foundation.HorizontalScrollbar
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -24,6 +23,7 @@ import com.aavarvd.halyra.io.FileManager
 import com.aavarvd.halyra.io.PythonRunner
 import com.aavarvd.halyra.ui.*
 import com.aavarvd.halyra.AppState.BottomPanelTab
+import com.aavarvd.halyra.settings.SettingsWindow
 
 @Composable
 fun WindowScope.App(
@@ -40,6 +40,8 @@ fun WindowScope.App(
     val fileManager = remember { FileManager(appState) }
     val pythonRunner = remember { PythonRunner(appState, coroutineScope) }
     val editorInputHandler = remember { EditorInputHandler(appState) }
+
+    var showSettings by remember { mutableStateOf(false) }
 
     val handleCloseRequest: () -> Unit = {
         appState.shellProcess?.stop()
@@ -151,11 +153,13 @@ fun WindowScope.App(
                         },
                         onToggleProjectTree = {
                             if (appState.projectRoot == null) {
-                                fileManager.openProjectFolder()
+                                appState.showFolderSelectionWarning = true
                             } else {
                                 appState.projectTreeVisible = !appState.projectTreeVisible
                             }
-                        }
+                        },
+                        onSetting = { showSettings = true },
+                        onOpenFolder = { fileManager.openProjectFolder() },
                     )
 
                     if (appState.projectTreeVisible) {
@@ -201,7 +205,6 @@ fun WindowScope.App(
                         } else {
                             val activeTab = appState.activeTab!!
 
-                            // Per-tab scroll state so switching tabs preserves scroll position (fixes E-01)
                             val editorScrollState = appState.scrollStateFor(activeTab)
                             val editorState = remember(activeTab.id) { EditorState(editorScrollState) }
 
@@ -281,17 +284,22 @@ fun WindowScope.App(
             }
         }
 
-        if (appState.showExitConfirmation) {
+        if (appState.showExitConfirmation)
             ExitConfirmationDialog(appState, handleCloseRequest, onCloseCancelled)
-        }
 
-        if (appState.showFolderSelectionWarning) {
+
+        if (appState.showFolderSelectionWarning)
             FolderSelectionWarningDialog(appState)
-        }
 
-        if (appState.showNewFileDialog) {
+
+        if (appState.showNewFileDialog)
             NewFileDialog(appState, fileManager)
-        }
+
+        if (showSettings)
+            SettingsWindow(
+                onCloseRequest = { showSettings = false }
+            )
+
 
         appState.pendingLargeFile?.let { file ->
             AlertDialog(

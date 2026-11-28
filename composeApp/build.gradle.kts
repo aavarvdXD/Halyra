@@ -29,6 +29,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation("com.github.weisj:jsvg:2.2.0")
         }
     }
 }

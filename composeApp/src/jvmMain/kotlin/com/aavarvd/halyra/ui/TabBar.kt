@@ -20,22 +20,52 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.res.loadImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aavarvd.halyra.editor.EditorTab
-import java.io.InputStream
+import com.github.weisj.jsvg.parser.SVGLoader
+import org.jetbrains.compose.resources.imageResource
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import kotlin.math.ceil
 
 private fun loadTabIcon(name: String): ImageBitmap {
-    val stream: InputStream =
-        Thread.currentThread()
-            .contextClassLoader
-            .getResourceAsStream("images/$name")
-            ?: error("Could not find icon: images/$name")
+    val url = Thread.currentThread()
+        .contextClassLoader
+        .getResource("images/$name")
+        ?: error("Could not parse SVG: $name")
 
-    return stream.use {
-        loadImageBitmap(it)
-    }
+    val document = SVGLoader().load(url)
+        ?: error("Could not load SVG: $name")
+
+    val svgSize = document.size()
+
+    val width = ceil(svgSize.width.toDouble()).toInt().coerceAtLeast(1)
+    val height = ceil(svgSize.height.toDouble()).toInt().coerceAtLeast(1)
+
+    val image = BufferedImage(
+        width,
+        height,
+        BufferedImage.TYPE_INT_ARGB
+    )
+
+    val graphics = image.createGraphics()
+
+    graphics.setRenderingHint(
+        RenderingHints.KEY_ANTIALIASING,
+        RenderingHints.VALUE_ANTIALIAS_ON
+    )
+
+    graphics.setRenderingHint(
+        RenderingHints.KEY_STROKE_CONTROL,
+        RenderingHints.VALUE_STROKE_PURE
+    )
+
+    document.render(null, graphics)
+    graphics.dispose()
+
+    return image.toComposeImageBitmap()
 }
 
 @Composable
@@ -45,11 +75,11 @@ fun TabBar(
     onTabClick: (Int) -> Unit,
     onTabClose: (Int) -> Unit
 ) {
-    val pythonIcon = remember { loadTabIcon("python.png") }
-    val fileIcon = remember { loadTabIcon("file.png") }
-    val textIcon = remember { loadTabIcon("text_dark.png") }
-    val gitignoreIcon = remember { loadTabIcon("gitignore.png") }
-    val xmlIcon = remember { loadTabIcon("xml_dark.png") }
+    val pythonIcon = remember { loadTabIcon("python.svg") }
+    val fileIcon = remember { loadTabIcon("file.svg") }
+    val textIcon = remember { loadTabIcon("text.svg") }
+    val gitignoreIcon = remember { loadTabIcon("gitignore.svg") }
+    val xmlIcon = remember { loadTabIcon("xml.svg") }
     val listState = rememberLazyListState()
 
     val tabsCount = tabs.size

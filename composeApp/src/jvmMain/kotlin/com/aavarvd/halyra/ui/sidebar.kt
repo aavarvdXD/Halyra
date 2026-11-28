@@ -11,24 +11,55 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.aavarvd.halyra.ui.AppFonts
-import java.io.InputStream
+import com.github.weisj.jsvg.parser.SVGLoader
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import kotlin.math.ceil
 
 private fun loadIcon(name: String): ImageBitmap {
-    val stream: InputStream =
-        Thread.currentThread()
-            .contextClassLoader
-            .getResourceAsStream("images/$name")
-            ?: error("Could not find icon: images/$name")
+    val url = Thread.currentThread()
+        .contextClassLoader
+        .getResource("images/$name")
+        ?: error("Could not find icon: images/$name")
 
-    return stream.use {
-        loadImageBitmap(it)
-    }
+    val loader = SVGLoader()
+    val document = loader.load(url)
+        ?: error("Could not parse SVG: $name")
+
+    val svgSize = document.size()
+
+    val width = ceil(svgSize.width.toDouble()).toInt().coerceAtLeast(1)
+    val height = ceil(svgSize.height.toDouble()).toInt().coerceAtLeast(1)
+
+    val image = BufferedImage(
+        width,
+        height,
+        BufferedImage.TYPE_INT_ARGB
+    )
+
+    val graphics = image.createGraphics()
+
+    graphics.setRenderingHint(
+        RenderingHints.KEY_ANTIALIASING,
+        RenderingHints.VALUE_ANTIALIAS_ON
+    )
+
+    graphics.setRenderingHint(
+        RenderingHints.KEY_STROKE_CONTROL,
+        RenderingHints.VALUE_STROKE_PURE
+    )
+
+    document.render(null, graphics)
+
+    graphics.dispose()
+
+    return image.toComposeImageBitmap()
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
@@ -110,16 +141,20 @@ fun Sidebar(
     onSave: () -> Unit,
     onShowOutput: () -> Unit,
     onShowTerminal: () -> Unit,
-    onToggleProjectTree: () -> Unit
+    onToggleProjectTree: () -> Unit,
+    onSetting: () -> Unit,
+    onOpenFolder: () -> Unit,
 ) {
-    val newIcon = remember { loadIcon("new.png") }
-    val openIcon = remember { loadIcon("open.png") }
-    val runIcon = remember { loadIcon("run.png") }
-    val stopIcon = remember { loadIcon("stop.png") }
-    val saveIcon = remember { loadIcon("save.png") }
-    val runConsoleIcon = remember { loadIcon("runConsole.png") }
-    val shellIcon = remember { loadIcon("shell.png") }
-    val folderIcon = remember { loadIcon("folder.png") }
+    val newIcon = remember { loadIcon("new.svg") }
+    val openIcon = remember { loadIcon("open.svg") }
+    val openFolderIcon = remember { loadIcon("folder.svg") }
+    val runIcon = remember { loadIcon("run.svg") }
+    val stopIcon = remember { loadIcon("stop.svg") }
+    val saveIcon = remember { loadIcon("save.svg") }
+    val runConsoleIcon = remember { loadIcon("runConsole.svg") }
+    val shellIcon = remember { loadIcon("shell.svg") }
+    val projectIcon = remember { loadIcon("projectStructure.svg") }
+    val settingsIcon = remember { loadIcon("settings.svg") }
 
     Column(
         modifier = Modifier
@@ -133,20 +168,21 @@ fun Sidebar(
         Spacer(modifier = Modifier.height(4.dp))
         SidebarButton(icon = openIcon, hint = "Open File", onClick = onOpen)
         Spacer(modifier = Modifier.height(4.dp))
-
-        if (isRunning) {
-            SidebarButton(icon = stopIcon, hint = "Stop", onClick = onStop)
-        } else {
-            SidebarButton(icon = runIcon, hint = "Run Python", onClick = onRun)
-        }
-
+        SidebarButton(icon = openFolderIcon, hint = "Open Folder", onClick = onOpenFolder)
         Spacer(modifier = Modifier.height(4.dp))
         SidebarButton(icon = saveIcon, hint = "Save File", onClick = onSave)
-        Spacer(modifier = Modifier.height(4.dp))
-        SidebarButton(icon = folderIcon, hint = "Project Structure", onClick = onToggleProjectTree)
+
+        if (isRunning)
+            SidebarButton(icon = stopIcon, hint = "Stop", onClick = onStop)
+        else
+            SidebarButton(icon = runIcon, hint = "Run Python", onClick = onRun)
 
         Spacer(modifier = Modifier.weight(1f))
 
+        SidebarButton(icon = projectIcon, hint = "Project Structure", onClick = onToggleProjectTree)
+        Spacer(modifier = Modifier.height(4.dp))
+        SidebarButton(icon = settingsIcon, hint = "Settings", onClick = onSetting)
+        Spacer(modifier = Modifier.height(4.dp))
         SidebarButton(icon = runConsoleIcon, hint = "Output Console", onClick = onShowOutput)
         Spacer(modifier = Modifier.height(4.dp))
         SidebarButton(icon = shellIcon, hint = "Terminal", onClick = onShowTerminal)
